@@ -20,64 +20,65 @@ const BN = utils.BN
    * @prop {Buffer} extraData
    * @prop {Array.<Buffer>} raw an array of buffers containing the raw blocks.
    */
-var BlockHeader = module.exports = function (data) {
-  var fields = [{
-    name: 'parentHash',
-    length: 32,
-    default: utils.zeros(32)
-  }, {
-    name: 'uncleHash',
-    default: utils.SHA3_RLP_ARRAY
-  }, {
-    name: 'coinbase',
-    length: 20,
-    default: utils.zeros(20)
-  }, {
-    name: 'stateRoot',
-    length: 32,
-    default: utils.zeros(32)
-  }, {
-    name: 'transactionsTrie',
-    length: 32,
-    default: utils.SHA3_RLP
-  }, {
-    name: 'receiptTrie',
-    length: 32,
-    default: utils.SHA3_RLP
-  }, {
-    name: 'bloom',
-    default: utils.zeros(256)
-  }, {
-    name: 'difficulty',
-    default: new Buffer([])
-  }, {
-    name: 'number',
-    default: utils.intToBuffer(params.homeSteadForkNumber.v)
-  }, {
-    name: 'gasLimit',
-    default: new Buffer('ffffffffffffff', 'hex')
-  }, {
-    name: 'gasUsed',
-    empty: true,
-    default: new Buffer([])
-  }, {
-    name: 'timestamp',
-    default: new Buffer([])
-  }, {
-    name: 'extraData',
-    allowZero: true,
-    empty: true,
-    default: new Buffer([])
-  }, {
-    name: 'mixHash',
-    default: utils.zeros(32)
+module.exports = class BlockHeader {
+  constructor (data) {
+    this.fields = [{
+      name: 'parentHash',
+      length: 32,
+      default: utils.zeros(32)
+    }, {
+      name: 'uncleHash',
+      default: utils.SHA3_RLP_ARRAY
+    }, {
+      name: 'coinbase',
+      length: 20,
+      default: utils.zeros(20)
+    }, {
+      name: 'stateRoot',
+      length: 32,
+      default: utils.zeros(32)
+    }, {
+      name: 'transactionsTrie',
+      length: 32,
+      default: utils.SHA3_RLP
+    }, {
+      name: 'receiptTrie',
+      length: 32,
+      default: utils.SHA3_RLP
+    }, {
+      name: 'bloom',
+      default: utils.zeros(256)
+    }, {
+      name: 'difficulty',
+      default: new Buffer([])
+    }, {
+      name: 'number',
+      default: utils.intToBuffer(params.homeSteadForkNumber.v)
+    }, {
+      name: 'gasLimit',
+      default: new Buffer('ffffffffffffff', 'hex')
+    }, {
+      name: 'gasUsed',
+      empty: true,
+      default: new Buffer([])
+    }, {
+      name: 'timestamp',
+      default: new Buffer([])
+    }, {
+      name: 'extraData',
+      allowZero: true,
+      empty: true,
+      default: new Buffer([])
+    }, {
+      name: 'mixHash',
+      default: utils.zeros(32)
       // length: 32
-  }, {
-    name: 'nonce',
-    default: new Buffer([]) // sha3(42)
-  }]
-  utils.defineProperties(this, fields, data)
-}
+    }, {
+      name: 'nonce',
+      default: new Buffer([]) // sha3(42)
+    }]
+    utils.defineProperties(this, this.fields, data)
+  }
 
 /**
  * Returns the canoncical difficulty of the block
@@ -85,44 +86,44 @@ var BlockHeader = module.exports = function (data) {
  * @param {Block} parentBlock the parent `Block` of the this header
  * @return {BN}
  */
-BlockHeader.prototype.canonicalDifficulty = function (parentBlock) {
-  const blockTs = new BN(this.timestamp)
-  const parentTs = new BN(parentBlock.header.timestamp)
-  const parentDif = new BN(parentBlock.header.difficulty)
-  const minimumDifficulty = new BN(params.minimumDifficulty.v)
-  var offset = parentDif.div(new BN(params.difficultyBoundDivisor.v))
-  var dif
+  canonicalDifficulty (parentBlock) {
+    const blockTs = new BN(this.timestamp)
+    const parentTs = new BN(parentBlock.header.timestamp)
+    const parentDif = new BN(parentBlock.header.difficulty)
+    const minimumDifficulty = new BN(params.minimumDifficulty.v)
+    const offset = parentDif.div(new BN(params.difficultyBoundDivisor.v))
+    let dif
 
-  if (this.isHomestead()) {
+    if (this.isHomestead) {
     // homestead
     // 1 - (block_timestamp - parent_timestamp) // 10
-    var a = blockTs.sub(parentTs).idivn(10).ineg().iaddn(1)
-    var cutoff = new BN(-99)
+      let a = blockTs.sub(parentTs).idivn(10).ineg().iaddn(1)
+      const cutoff = new BN(-99)
     // MAX(cutoff, a)
-    if (cutoff.cmp(a) === 1) {
-      a = cutoff
-    }
-    dif = parentDif.add(offset.mul(a))
-  } else {
-    // prehomestead
-    if (parentTs.addn(params.durationLimit.v).cmp(blockTs) === 1) {
-      dif = offset.add(parentDif)
+      if (cutoff.cmp(a) === 1) {
+        a = cutoff
+      }
+      dif = parentDif.add(offset.mul(a))
     } else {
-      dif = parentDif.sub(offset)
+    // prehomestead
+      if (parentTs.addn(params.durationLimit.v).cmp(blockTs) === 1) {
+        dif = offset.add(parentDif)
+      } else {
+        dif = parentDif.sub(offset)
+      }
     }
-  }
 
-  var exp = new BN(this.number).idivn(100000).isubn(2)
-  if (!exp.isNeg()) {
-    dif.iadd(new BN(2).pow(exp))
-  }
+    const exp = new BN(this.number).idivn(100000).isubn(2)
+    if (!exp.isNeg()) {
+      dif.iadd(new BN(2).pow(exp))
+    }
 
-  if (dif.cmp(minimumDifficulty) === -1) {
-    dif = minimumDifficulty
-  }
+    if (dif.cmp(minimumDifficulty) === -1) {
+      dif = minimumDifficulty
+    }
 
-  return dif
-}
+    return dif
+  }
 
 /**
  * checks that the block's `difficuly` matches the canonical difficulty
@@ -130,10 +131,10 @@ BlockHeader.prototype.canonicalDifficulty = function (parentBlock) {
  * @param {Block} parentBlock this block's parent
  * @return {Boolean}
  */
-BlockHeader.prototype.validateDifficulty = function (parentBlock) {
-  const dif = this.canonicalDifficulty(parentBlock)
-  return dif.cmp(new BN(this.difficulty)) === 0
-}
+  validateDifficulty (parentBlock) {
+    const dif = this.canonicalDifficulty(parentBlock)
+    return dif.cmp(new BN(this.difficulty)) === 0
+  }
 
 /**
  * Validates the gasLimit
@@ -141,15 +142,15 @@ BlockHeader.prototype.validateDifficulty = function (parentBlock) {
  * @param {Block} parentBlock this block's parent
  * @returns {Boolean}
  */
-BlockHeader.prototype.validateGasLimit = function (parentBlock) {
-  const pGasLimit = utils.bufferToInt(parentBlock.header.gasLimit)
-  const gasLimit = utils.bufferToInt(this.gasLimit)
-  const a = Math.floor(pGasLimit / params.gasLimitBoundDivisor.v)
-  const maxGasLimit = pGasLimit + a
-  const minGasLimit = pGasLimit - a
+  validateGasLimit (parentBlock) {
+    const pGasLimit = utils.bufferToInt(parentBlock.header.gasLimit)
+    const gasLimit = utils.bufferToInt(this.gasLimit)
+    const a = Math.floor(pGasLimit / params.gasLimitBoundDivisor.v)
+    const maxGasLimit = pGasLimit + a
+    const minGasLimit = pGasLimit - a
 
-  return maxGasLimit > gasLimit && minGasLimit < gasLimit && params.minGasLimit.v <= gasLimit
-}
+    return maxGasLimit > gasLimit && minGasLimit < gasLimit && params.minGasLimit.v <= gasLimit
+  }
 
 /**
  * Validates the entire block header
@@ -158,93 +159,94 @@ BlockHeader.prototype.validateGasLimit = function (parentBlock) {
  * @param {Bignum} [height] if this is an uncle header, this is the height of the block that is including it
  * @param {Function} cb the callback function. The callback is given an `error` if the block is invalid
  */
-BlockHeader.prototype.validate = function (blockchain, height, cb) {
-  var self = this
-  if (arguments.length === 2) {
-    cb = height
-    height = false
-  }
+  validate (blockchain, height, cb) {
+    const self = this
+    if (arguments.length === 2) {
+      cb = height
+      height = false
+    }
 
-  if (this.isGenesis()) {
-    return cb()
-  }
+    if (this.isGenesis()) {
+      return cb()
+    }
 
   // find the blocks parent
-  blockchain.getBlock(self.parentHash, function (err, parentBlock) {
-    if (err) {
-      return cb('could not find parent block')
-    }
-
-    self.parentBlock = parentBlock
-
-    var number = new BN(self.number)
-    if (number.cmp(new BN(parentBlock.header.number).iaddn(1)) !== 0) {
-      return cb('invalid number')
-    }
-
-    if (height) {
-      var dif = height.sub(new BN(parentBlock.header.number))
-      if (!(dif.cmpn(8) === -1 && dif.cmpn(1) === 1)) {
-        return cb('uncle block has a parent that is too old or to young')
+    blockchain.getBlock(self.parentHash, (err, parentBlock) => {
+      if (err) {
+        return cb('could not find parent block')
       }
-    }
 
-    if (!self.validateDifficulty(parentBlock)) {
-      return cb('invalid Difficulty')
-    }
+      self.parentBlock = parentBlock
 
-    if (!self.validateGasLimit(parentBlock)) {
-      return cb('invalid gas limit')
-    }
+      const number = new BN(self.number)
+      if (number.cmp(new BN(parentBlock.header.number).iaddn(1)) !== 0) {
+        return cb('invalid number')
+      }
 
-    if (utils.bufferToInt(parentBlock.header.number) + 1 !== utils.bufferToInt(self.number)) {
-      return cb('invalid heigth')
-    }
+      if (height) {
+        const dif = height.sub(new BN(parentBlock.header.number))
+        if (!(dif.cmpn(8) === -1 && dif.cmpn(1) === 1)) {
+          return cb('uncle block has a parent that is too old or to young')
+        }
+      }
 
-    if (utils.bufferToInt(self.timestamp) <= utils.bufferToInt(parentBlock.header.timestamp)) {
-      return cb('invalid timestamp')
-    }
+      if (!self.validateDifficulty(parentBlock)) {
+        return cb('invalid Difficulty')
+      }
 
-    if (self.extraData.length > params.maximumExtraDataSize.v) {
-      return cb('invalid amount of extra data')
-    }
+      if (!self.validateGasLimit(parentBlock)) {
+        return cb('invalid gas limit')
+      }
 
-    cb()
-  })
-}
+      if (utils.bufferToInt(parentBlock.header.number) + 1 !== utils.bufferToInt(self.number)) {
+        return cb('invalid heigth')
+      }
+
+      if (utils.bufferToInt(self.timestamp) <= utils.bufferToInt(parentBlock.header.timestamp)) {
+        return cb('invalid timestamp')
+      }
+
+      if (self.extraData.length > params.maximumExtraDataSize.v) {
+        return cb('invalid amount of extra data')
+      }
+
+      cb()
+    })
+  }
 
 /**
  * Returns the sha3 hash of the blockheader
- * @method hash
  * @return {Buffer}
+ * @prop hash
  */
-BlockHeader.prototype.hash = function () {
-  return utils.rlphash(this.raw)
-}
+  get hash () {
+    return utils.rlphash(this.raw)
+  }
 
 /**
  * checks if the blockheader is a genesis header
- * @method isGenesis
+ * @prop isGenesis
  * @return {Boolean}
  */
-BlockHeader.prototype.isGenesis = function () {
-  return this.number.toString('hex') === ''
-}
+  get isGenesis () {
+    return this.number.toString('hex') === ''
+  }
 
 /**
  * Determines if a given block part of homestead or not
- * @method isHomestead
+ * @prop isHomestead
  * @return Boolean
  */
-BlockHeader.prototype.isHomestead = function () {
-  return utils.bufferToInt(this.number) >= params.homeSteadForkNumber.v
-}
+  get isHomestead () {
+    return utils.bufferToInt(this.number) >= params.homeSteadForkNumber.v
+  }
 
 /**
  * Determines if a given block part of Homestead Reprice (EIP150) or not
- * @method isHomesteadReprice
+ * @prop isHomesteadReprice
  * @return Boolean
  */
-BlockHeader.prototype.isHomesteadReprice = function () {
-  return utils.bufferToInt(this.number) >= params.homesteadRepriceForkNumber.v
+  get isHomesteadReprice () {
+    return utils.bufferToInt(this.number) >= params.homesteadRepriceForkNumber.v
+  }
 }

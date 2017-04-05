@@ -27,15 +27,13 @@ testing.runTests(function (data, st, cb) {
   parentBlock.header.difficulty = data.parentDifficulty
 
   var block = new Block()
-  if (data.homestead) {
-    block.header.isHomestead = function () {
-      return true
+  Object.defineProperty(block.header, 'isHomestead', {
+    configurable: true,
+    enumerable: true,
+    get: function () {
+      return data.homestead
     }
-  } else {
-    block.header.isHomestead = function () {
-      return false
-    }
-  }
+  })
   block.header.timestamp = data.currentTimestamp
   block.header.difficulty = data.currentDifficulty
   block.header.number = data.currentBlockNumber

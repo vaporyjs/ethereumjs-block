@@ -27,9 +27,9 @@ tape('[Block]: Header functions', function (t) {
 
   t.test('should be true for isGenesis', function (st) {
     var header = new Header()
-    st.equal(header.isGenesis(), false)
+    st.equal(header.isGenesis, false)
     header.number = new Buffer([])
-    st.equal(header.isGenesis(), true)
+    st.equal(header.isGenesis, true)
     st.end()
   })
 })

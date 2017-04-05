@@ -8,7 +8,7 @@ tape('[Common]: genesis hashes tests', function (t) {
     blockGenesis.setGenesisParams()
     var rlpGenesis = blockGenesis.serialize()
     st.strictEqual(rlpGenesis.toString('hex'), genesisData.genesis_rlp_hex, 'rlp hex mismatch')
-    st.strictEqual(blockGenesis.hash().toString('hex'), genesisData.genesis_hash)
+    st.strictEqual(blockGenesis.hash.toString('hex'), genesisData.genesis_hash)
     st.end()
   })
 })

@@ -32,9 +32,9 @@ tape('[Block]: Block functions', function (t) {
 
   t.test('should be true for isGenesis', function (st) {
     var block = new Block()
-    st.equal(block.isGenesis(), false)
+    st.equal(block.isGenesis, false)
     block.header.number = new Buffer([])
-    st.equal(block.isGenesis(), true)
+    st.equal(block.isGenesis, true)
     st.end()
   })
 })

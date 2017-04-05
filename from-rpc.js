@@ -34,9 +34,13 @@ function blockFromRpc (blockParams, uncles) {
   blockHeader.nonce = blockParams.nonce
 
   // override hash incase something was missing
-  blockHeader.hash = function () {
-    return ethUtil.toBuffer(blockParams.hash)
-  }
+  Object.defineProperty(blockHeader, 'hash', {
+    configurable: true,
+    enumerable: true,
+    get: () => {
+      return ethUtil.toBuffer(blockParams.hash)
+    }
+  })
 
   block.transactions = (blockParams.transactions || []).map(function (_txParams) {
     let txParams = Object.assign({}, _txParams)
