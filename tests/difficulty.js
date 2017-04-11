@@ -31,7 +31,7 @@ testing.runTests(function (data, st, cb) {
     configurable: true,
     enumerable: true,
     get: function () {
-      return data.homestead
+      return function () { return data.homestead }
     }
   })
   block.header.timestamp = data.currentTimestamp

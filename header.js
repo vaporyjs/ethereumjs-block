@@ -1,27 +1,26 @@
 const utils = require('ethereumjs-util')
 const params = require('ethereum-common/params.json')
 const BN = utils.BN
-  /**
-   * An object that repersents the block header
-   * @constructor
-   * @param {Array} data raw data, deserialized
-   * @prop {Buffer} parentHash the blocks' parent's hash
-   * @prop {Buffer} uncleHash sha3(rlp_encode(uncle_list))
-   * @prop {Buffer} coinbase the miner address
-   * @prop {Buffer} stateRoot The root of a Merkle Patricia tree
-   * @prop {Buffer} transactionTrie the root of a Trie containing the transactions
-   * @prop {Buffer} receiptTrie the root of a Trie containing the transaction Reciept
-   * @prop {Buffer} bloom
-   * @prop {Buffer} difficulty
-   * @prop {Buffer} number the block's height
-   * @prop {Buffer} gasLimit
-   * @prop {Buffer} gasUsed
-   * @prop {Buffer} timestamp
-   * @prop {Buffer} extraData
-   * @prop {Array.<Buffer>} raw an array of buffers containing the raw blocks.
-   */
+/**
+ * An object that repersents the block header
+ * @constructor
+ * @param {Array} data raw data, deserialized
+ * @prop {Buffer} parentHash the blocks' parent's hash
+ * @prop {Buffer} uncleHash sha3(rlp_encode(uncle_list))
+ * @prop {Buffer} coinbase the miner address
+ * @prop {Buffer} stateRoot The root of a Merkle Patricia tree
+ * @prop {Buffer} transactionTrie the root of a Trie containing the transactions
+ * @prop {Buffer} receiptTrie the root of a Trie containing the transaction Reciept
+ * @prop {Buffer} bloom
+ * @prop {Buffer} difficulty
+ * @prop {Buffer} number the block's height
+ * @prop {Buffer} gasLimit
+ * @prop {Buffer} gasUsed
+ * @prop {Buffer} timestamp
+ * @prop {Buffer} extraData
+ */
 module.exports = class BlockHeader {
-  constructor (data) {
+  constructor () {
     this.fields = [{
       name: 'parentHash',
       length: 32,
@@ -72,20 +71,52 @@ module.exports = class BlockHeader {
     }, {
       name: 'mixHash',
       default: utils.zeros(32)
-      // length: 32
+               // length: 32
     }, {
       name: 'nonce',
       default: new Buffer([]) // sha3(42)
     }]
-    utils.defineProperties(this, this.fields, data)
+
+    this.fields.forEach((field) => {
+      this[field.name] = field.default
+    })
   }
 
-/**
- * Returns the canoncical difficulty of the block
- * @method canonicalDifficulty
- * @param {Block} parentBlock the parent `Block` of the this header
- * @return {BN}
- */
+  /**
+   * Returns a new BlockHeader object from the provided JSON data
+   * @method from
+   * @param {Object} data
+   * @return {BlockHeader}
+   */
+  static from (data) {
+    const header = new BlockHeader()
+    this.fields.forEach((field) => {
+      // TODO validation
+      //
+      if (field.length) {
+        if (data[field.name] > field.length) {
+          throw new Error(`${field.name} can only be ${field.length} long!`)
+        }
+      }
+      if (!field.empty && data[field.name].length === 0) {
+        throw new Error(`${field.name} should not be empty!`)
+      }
+
+      if (!field.allowZero && !data[field.name]) {
+        throw new Error(`${field.name} should not be zero or undefined!`)
+      }
+
+      header[field.name] = data[field.name]
+    })
+    return header
+  }
+
+  /**
+   * Returns the canoncical difficulty of the block
+   * @method canonicalDifficulty
+   * @param {Block} parentBlock the parent `Block` of the this header
+   * @return {BN}
+   */
   canonicalDifficulty (parentBlock) {
     const blockTs = new BN(this.timestamp)
     const parentTs = new BN(parentBlock.header.timestamp)
@@ -93,19 +124,18 @@ module.exports = class BlockHeader {
     const minimumDifficulty = new BN(params.minimumDifficulty.v)
     const offset = parentDif.div(new BN(params.difficultyBoundDivisor.v))
     let dif
-
-    if (this.isHomestead) {
-    // homestead
-    // 1 - (block_timestamp - parent_timestamp) // 10
+    if (this.isHomestead()) {
+        // homestead
+        // 1 - (block_timestamp - parent_timestamp) // 10
       let a = blockTs.sub(parentTs).idivn(10).ineg().iaddn(1)
       const cutoff = new BN(-99)
-    // MAX(cutoff, a)
+          // MAX(cutoff, a)
       if (cutoff.cmp(a) === 1) {
         a = cutoff
       }
       dif = parentDif.add(offset.mul(a))
     } else {
-    // prehomestead
+        // prehomestead
       if (parentTs.addn(params.durationLimit.v).cmp(blockTs) === 1) {
         dif = offset.add(parentDif)
       } else {
@@ -125,23 +155,23 @@ module.exports = class BlockHeader {
     return dif
   }
 
-/**
- * checks that the block's `difficuly` matches the canonical difficulty
- * @method validateDifficulty
- * @param {Block} parentBlock this block's parent
- * @return {Boolean}
- */
+  /**
+   * checks that the block's `difficuly` matches the canonical difficulty
+   * @method validateDifficulty
+   * @param {Block} parentBlock this block's parent
+   * @return {Boolean}
+   */
   validateDifficulty (parentBlock) {
     const dif = this.canonicalDifficulty(parentBlock)
     return dif.cmp(new BN(this.difficulty)) === 0
   }
 
-/**
- * Validates the gasLimit
- * @method validateGasLimit
- * @param {Block} parentBlock this block's parent
- * @returns {Boolean}
- */
+  /**
+   * Validates the gasLimit
+   * @method validateGasLimit
+   * @param {Block} parentBlock this block's parent
+   * @returns {Boolean}
+   */
   validateGasLimit (parentBlock) {
     const pGasLimit = utils.bufferToInt(parentBlock.header.gasLimit)
     const gasLimit = utils.bufferToInt(this.gasLimit)
@@ -152,13 +182,13 @@ module.exports = class BlockHeader {
     return maxGasLimit > gasLimit && minGasLimit < gasLimit && params.minGasLimit.v <= gasLimit
   }
 
-/**
- * Validates the entire block header
- * @method validate
- * @param {Blockchain} blockChain the blockchain that this block is validating against
- * @param {Bignum} [height] if this is an uncle header, this is the height of the block that is including it
- * @param {Function} cb the callback function. The callback is given an `error` if the block is invalid
- */
+  /**
+   * Validates the entire block header
+   * @method validate
+   * @param {Blockchain} blockChain the blockchain that this block is validating against
+   * @param {Bignum} [height] if this is an uncle header, this is the height of the block that is including it
+   * @param {Function} cb the callback function. The callback is given an `error` if the block is invalid
+   */
   validate (blockchain, height, cb) {
     const self = this
     if (arguments.length === 2) {
@@ -170,8 +200,8 @@ module.exports = class BlockHeader {
       return cb()
     }
 
-  // find the blocks parent
-    blockchain.getBlock(self.parentHash, (err, parentBlock) => {
+    // find the blocks parent
+    blockchain.getBlock(self.parentHash, function (err, parentBlock) {
       if (err) {
         return cb('could not find parent block')
       }
@@ -214,39 +244,42 @@ module.exports = class BlockHeader {
     })
   }
 
-/**
- * Returns the sha3 hash of the blockheader
- * @return {Buffer}
- * @prop hash
- */
-  get hash () {
-    return utils.rlphash(this.raw)
+  /**
+   * Returns the sha3 hash of the blockheader
+   * @method hash
+   * @return {Buffer}
+   */
+  hash () {
+    return utils.rlphash(this.fields.map((field) => this[field.name]))
   }
 
-/**
- * checks if the blockheader is a genesis header
- * @prop isGenesis
- * @return {Boolean}
- */
-  get isGenesis () {
+  /**
+   * checks if the blockheader is a genesis header
+   * @method isGenesis
+   * @return {Boolean}
+   */
+  isGenesis () {
     return this.number.toString('hex') === ''
   }
 
-/**
- * Determines if a given block part of homestead or not
- * @prop isHomestead
- * @return Boolean
- */
-  get isHomestead () {
+  /**
+   * Determines if a given block part of homestead or not
+   * @method isHomestead
+   * @return Boolean
+   */
+  isHomestead () {
     return utils.bufferToInt(this.number) >= params.homeSteadForkNumber.v
   }
 
-/**
- * Determines if a given block part of Homestead Reprice (EIP150) or not
- * @prop isHomesteadReprice
- * @return Boolean
- */
-  get isHomesteadReprice () {
+  /**
+   * Determines if a given block part of Homestead Reprice (EIP150) or not
+   * @method isHomesteadReprice
+   * @return Boolean
+   */
+  isHomesteadReprice () {
     return utils.bufferToInt(this.number) >= params.homesteadRepriceForkNumber.v
+  }
+  get raw () {
+    return this.fields.map((field) => this[field.name])
   }
 }

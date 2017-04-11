@@ -8,6 +8,8 @@ const BlockHeader = require('./header')
 const params = require('ethereum-common/params.json')
 const Message = require('primea-message')
 
+module.exports = class Block extends Message {
+
 /**
  * Creates a new block object
  * @constructor the raw serialized or the deserialized block.
@@ -16,81 +18,87 @@ const Message = require('primea-message')
  * @prop {Array.<Header>} uncleList an array of uncle headers
  * @prop {Array.<Buffer>} raw an array of buffers containing the raw blocks.
  */
-module.exports = class Block extends Message {
-  constructor (data) {
+  constructor () {
     super()
-
     this.transactions = []
     this.uncleHeaders = []
     this._inBlockChain = false
     this.txTrie = new Trie()
+    this.header = new BlockHeader()
+  }
 
+  /*
+   * Creates a new block from the provided rlp encoded hex data
+   * @method from
+   * @returns {Block}
+   * @param {Array} data
+   */
+  static from (data) {
+    const block = new Block()
     let rawTransactions
     let rawUncleHeaders
-
-      // defaults
-    if (!data) {
-      data = [[], [], []]
-    }
 
     if (Buffer.isBuffer(data)) {
       data = rlp.decode(data)
     }
 
     if (Array.isArray(data)) {
-      this.header = new BlockHeader(data[0])
+      block.header = BlockHeader.from(data[0])
       rawTransactions = data[1]
       rawUncleHeaders = data[2]
     } else {
-      this.header = new BlockHeader(data.header)
+      block.header = BlockHeader.from(data.header)
       rawTransactions = data.transactions || []
       rawUncleHeaders = data.uncleHeaders || []
     }
 
     // parse uncle headers
     for (let i = 0; i < rawUncleHeaders.length; i++) {
-      this.uncleHeaders.push(new BlockHeader(rawUncleHeaders[i]))
+      block.uncleHeaders.push(BlockHeader.from(rawUncleHeaders[i]))
     }
 
-    let homestead = this.isHomestead
+    const homestead = block.isHomestead()
       // parse transactions
     for (let i = 0; i < rawTransactions.length; i++) {
       const tx = new Tx(rawTransactions[i])
       tx._homestead = homestead
-      this.transactions.push(tx)
+      block.transactions.push(tx)
     }
+    return block
   }
-
   /**
    * Produces a hash the RLP of the block
-   * @prop hash
+   * @method hash
    */
-  get hash () {
-    return this.header.hash
+  hash () {
+    return this.header.hash()
   }
 
   /**
    * Determines if a given block is the genesis block
-   * @prop isGenisis
+   * @method isGenisis
+   * @return Boolean
    */
-  get isGenesis () {
-    return this.header.isGenesis
+  isGenesis () {
+    return this.header.isGenesis()
   }
 
   /**
    * Determines if a given block part of homestead or not
-   * @prop isHomestead
+   * @method isHomestead
+   * @return Boolean
    */
-  get isHomestead () {
-    return this.header.isHomestead
+  isHomestead () {
+    return this.header.isHomestead()
   }
 
   /**
    * Determines if a given block part of homestead reprice or not
-   * @prop isHomesteadReprice
+   * @method isHomesteadReprice
+   * @return Boolean
    */
-  get isHomesteadReprice () {
-    return this.header.isHomesteadReprice
+  isHomesteadReprice () {
+    return this.header.isHomesteadReprice()
   }
 
   /**
@@ -128,12 +136,7 @@ module.exports = class Block extends Message {
     this.uncleHeaders.forEach((uncle) => {
       raw[2].push(uncle.raw)
     })
-
     return rlpEncode ? rlp.encode(raw) : raw
-  }
-
-  get raw () {
-    return this.serialize(false)
   }
 
   /**
@@ -144,8 +147,10 @@ module.exports = class Block extends Message {
    */
   genTxTrie (cb) {
     let i = 0
+    const self = this
+
     async.eachSeries(this.transactions, (tx, done) => {
-      this.txTrie.put(rlp.encode(i), tx.serialize(), done)
+      self.txTrie.put(rlp.encode(i), tx.serialize(), done)
       i++
     }, cb)
   }
@@ -199,9 +204,9 @@ module.exports = class Block extends Message {
 
     async.parallel([
           // validate uncles
-      this.validateUncles.bind(this, blockChain),
+      self.validateUncles.bind(self, blockChain),
           // validate block
-      this.header.validate.bind(this.header, blockChain),
+      self.header.validate.bind(self.header, blockChain),
           // generate the transaction trie
       self.genTxTrie.bind(self)
     ], (err) => {
@@ -248,7 +253,7 @@ module.exports = class Block extends Message {
    * @param {Function} cb the callback
    */
   validateUncles (blockChain, cb) {
-    if (this.isGenesis) {
+    if (this.isGenesis()) {
       return cb()
     }
 
@@ -267,7 +272,7 @@ module.exports = class Block extends Message {
     }
 
     async.each(self.uncleHeaders, (uncle, cb2) => {
-      let height = new BN(self.header.number)
+      const height = new BN(self.header.number)
       async.parallel([
         uncle.validate.bind(uncle, blockChain, height),
             // check to make sure the uncle is not already in the blockchain
@@ -311,8 +316,10 @@ module.exports = class Block extends Message {
       return ethUtil.baToJSON(this.raw)
     }
   }
+  get raw () {
+    return this.serialize(false)
+  }
 }
-
 function arrayToString (array) {
   try {
     return array.reduce((str, err) => {
