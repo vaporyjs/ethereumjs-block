@@ -1,6 +1,6 @@
 const tape = require('tape')
-const testing = require('ethereumjs-testing')
-const rlp = require('ethereumjs-util').rlp
+const testing = require('vaporyjs-testing')
+const rlp = require('vaporyjs-util').rlp
 const Block = require('../index.js')
 
 tape('[Block]: block functions', function (t) {

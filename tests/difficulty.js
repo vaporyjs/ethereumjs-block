@@ -1,5 +1,5 @@
-// const testing = require('ethereumjs-testing')
-const utils = require('ethereumjs-util')
+// const testing = require('vaporyjs-testing')
+const utils = require('vaporyjs-util')
 const tape = require('tape')
 const Block = require('../')
 const BN = utils.BN
@@ -38,7 +38,7 @@ tape('[Header]: difficulty tests', t => {
   t.end()
 
   // Temporarily run local test selection
-  // also: implicit testing through ethereumjs-vm tests
+  // also: implicit testing through vaporyjs-vm tests
   // (no Byzantium difficulty tests available yet)
   /*
   let args = {}

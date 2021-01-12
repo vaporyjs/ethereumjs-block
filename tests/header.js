@@ -1,8 +1,8 @@
 const tape = require('tape')
-const params = require('ethereum-common')
-const utils = require('ethereumjs-util')
+const params = require('vapory-common')
+const utils = require('vaporyjs-util')
 const rlp = utils.rlp
-const testing = require('ethereumjs-testing')
+const testing = require('vaporyjs-testing')
 const Header = require('../header.js')
 const Block = require('../index.js')
 
