@@ -1,6 +1,6 @@
 const vapUtil = require('vaporyjs-util')
 const Tx = require('vaporyjs-tx')
-const Trie = require('merkle-patricia-tree')
+const Trie = require('@vaporyjs/merkle-patricia-tree')
 const BN = vapUtil.BN
 const rlp = vapUtil.rlp
 const async = require('async')
