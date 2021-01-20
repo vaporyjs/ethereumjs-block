@@ -1,11 +1,11 @@
-const ethUtil = require('ethereumjs-util')
-const Tx = require('ethereumjs-tx')
-const Trie = require('merkle-patricia-tree')
-const BN = ethUtil.BN
-const rlp = ethUtil.rlp
+const vapUtil = require('vaporyjs-util')
+const Tx = require('vaporyjs-tx')
+const Trie = require('@vaporyjs/merkle-patricia-tree')
+const BN = vapUtil.BN
+const rlp = vapUtil.rlp
 const async = require('async')
 const BlockHeader = require('./header')
-const params = require('ethereum-common')
+const params = require('vapory-common')
 
 /**
  * Creates a new block object
@@ -153,7 +153,7 @@ Block.prototype.validateTransactionsTrie = function () {
   if (this.transactions.length) {
     return txT === this.txTrie.root.toString('hex')
   } else {
-    return txT === ethUtil.SHA3_RLP.toString('hex')
+    return txT === vapUtil.SHA3_RLP.toString('hex')
   }
 }
 
@@ -232,7 +232,7 @@ Block.prototype.validateUnclesHash = function () {
   })
 
   raw = rlp.encode(raw)
-  return ethUtil.sha3(raw).toString('hex') === this.header.uncleHash.toString('hex')
+  return vapUtil.sha3(raw).toString('hex') === this.header.uncleHash.toString('hex')
 }
 
 /**
@@ -302,7 +302,7 @@ Block.prototype.toJSON = function (labeled) {
     })
     return obj
   } else {
-    return ethUtil.baToJSON(this.raw)
+    return vapUtil.baToJSON(this.raw)
   }
 }
 

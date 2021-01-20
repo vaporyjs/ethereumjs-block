@@ -1,9 +1,9 @@
-const testing = require('ethereumjs-testing')
-const ethUtil = require('ethereumjs-util')
+const testing = require('vaporyjs-testing')
+const vapUtil = require('vaporyjs-util')
 const basicTests = testing.tests.basicTests
 const tape = require('tape')
 const Block = require('../')
-const BN = ethUtil.BN
+const BN = vapUtil.BN
 
 function addHomesteadFlag (tests) {
   Object.keys(tests).map(function (q) {
@@ -15,7 +15,7 @@ function addHomesteadFlag (tests) {
 function normilize (data) {
   Object.keys(data).map(function (i) {
     if (i !== 'homestead') {
-      data[i] = ethUtil.isHexPrefixed(data[i]) ? new BN(ethUtil.toBuffer(data[i])) : new BN(data[i])
+      data[i] = vapUtil.isHexPrefixed(data[i]) ? new BN(vapUtil.toBuffer(data[i])) : new BN(data[i])
     }
   })
 }

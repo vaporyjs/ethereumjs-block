@@ -1,4 +1,4 @@
-const genesisData = require('ethereumjs-testing').tests.basicTests.genesishashestest
+const genesisData = require('vaporyjs-testing').tests.basicTests.genesishashestest
 const tape = require('tape')
 const Block = require('../')
 

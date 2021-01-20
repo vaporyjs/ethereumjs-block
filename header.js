@@ -1,5 +1,5 @@
-const utils = require('ethereumjs-util')
-const params = require('ethereum-common')
+const utils = require('vaporyjs-util')
+const params = require('vapory-common')
 const BN = utils.BN
   /**
    * An object that repersents the block header
